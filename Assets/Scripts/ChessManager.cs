@@ -258,17 +258,20 @@ public class ChessManager : MonoBehaviour
 
         ClearHighlights(); // Remove old highlights
         List<Vector2Int> validMoves = GetValidMoves(pos);
+        GameObject selectedPiece = GetPieceAtPosition(pos);
+        bool isWhite = selectedPiece.name.StartsWith("White");
 
         Debug.Log($"✅ Valid moves found: {validMoves.Count}");
 
         foreach (Vector2Int move in validMoves)
         {
-            // ✅ Ensure the tile is not occupied by a friendly piece
             GameObject targetPiece = GetPieceAtPosition(move);
-            if (targetPiece != null && !IsEnemyPiece(targetPiece, GetPieceAtPosition(pos).tag.Contains("White")))
+
+            // ✅ Skip highlighting tiles occupied by friendly pieces
+            if (targetPiece != null && !IsEnemyPiece(targetPiece, isWhite))
             {
-                Debug.Log($"🚫 Skipping invalid move at {move} (Occupied by friendly piece)");
-                continue; // Skip highlighting this tile
+                Debug.Log($"🚫 Skipping occupied tile at {move} (Friendly piece)");
+                continue; 
             }
 
             Debug.Log($"🟢 Highlighting move at: {move}");
@@ -622,6 +625,13 @@ public class ChessManager : MonoBehaviour
             Vector2Int pos = Vector2Int.RoundToInt(piece.transform.position);
             List<Vector2Int> moves = GetValidMoves(pos);
 
+            // ✅ Filter out moves that are blocked by friendly pieces
+            moves.RemoveAll(move =>
+            {
+                GameObject targetPiece = GetPieceAtPosition(move);
+                return targetPiece != null && !IsEnemyPiece(targetPiece, aiPlaysWhite); // Blocked by friendly piece
+            });
+
             if (moves.Count > 0)
                 movablePieces.Add(piece);
         }
@@ -633,17 +643,25 @@ public class ChessManager : MonoBehaviour
             yield break;
         }
 
-        // ✅ Choose a piece and move randomly
-        GameObject selectedPiece = movablePieces[Random.Range(0, movablePieces.Count)];
-        Vector2Int piecePos = Vector2Int.RoundToInt(selectedPiece.transform.position);
-        List<Vector2Int> validMoves = GetValidMoves(piecePos);
+        // ✅ Choose a piece that has at least one valid move
+        GameObject selectedPiece;
+        Vector2Int piecePos;
+        List<Vector2Int> validMoves;
 
-        if (validMoves.Count == 0) // **Extra safeguard**
+        do
         {
-            Debug.Log("AI piece has no valid moves. Skipping.");
-            turn = aiPlaysWhite ? "black" : "white";
-            yield break;
-        }
+            selectedPiece = movablePieces[Random.Range(0, movablePieces.Count)];
+            piecePos = Vector2Int.RoundToInt(selectedPiece.transform.position);
+            validMoves = GetValidMoves(piecePos);
+
+            // ✅ Ensure AI does not move onto friendly pieces
+            validMoves.RemoveAll(move =>
+            {
+                GameObject targetPiece = GetPieceAtPosition(move);
+                return targetPiece != null && !IsEnemyPiece(targetPiece, aiPlaysWhite); 
+            });
+
+        } while (validMoves.Count == 0); // Keep picking until a piece has a valid move
 
         Vector2Int chosenMove = validMoves[Random.Range(0, validMoves.Count)];
         selectedPiece.transform.position = new Vector2(chosenMove.x, chosenMove.y);
@@ -654,4 +672,5 @@ public class ChessManager : MonoBehaviour
         // ✅ Switch turn back to player
         turn = aiPlaysWhite ? "black" : "white";
     }
+
 }
