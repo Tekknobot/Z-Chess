@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &6205958486890858004
+--- !u!1 &6180614900741608745
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,22 +8,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8965745839774316327}
-  - component: {fileID: 2264134824347301055}
+  - component: {fileID: 8099101404340952638}
+  - component: {fileID: 506546037836404964}
   m_Layer: 0
   m_Name: White_Queen
-  m_TagString: Untagged
+  m_TagString: BlackQueen
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8965745839774316327
+--- !u!4 &8099101404340952638
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6205958486890858004}
+  m_GameObject: {fileID: 6180614900741608745}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -32,13 +32,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &2264134824347301055
+--- !u!212 &506546037836404964
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6205958486890858004}
+  m_GameObject: {fileID: 6180614900741608745}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0

@@ -23,6 +23,7 @@ public class ChessManager : MonoBehaviour
     private bool pieceSelected = false;
     public Color highlightColor = new Color(0, 1, 0, 0.5f); // Transparent green
     private List<GameObject> highlightedTiles = new List<GameObject>(); // Stores highlighted tiles
+    public GameObject highlightPrefab;
 
     private readonly string[,] startBoard = {
         { "r", "n", "b", "q", "k", "b", "n", "r" },
@@ -143,11 +144,17 @@ public class ChessManager : MonoBehaviour
         GameObject piece = Instantiate(piecePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
         piece.name = isWhite ? $"White_{pieceSymbol}" : $"Black_{pieceSymbol}";
 
+        // ✅ Fix: Ensure pieces are above highlights
+        SpriteRenderer sr = piece.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sortingOrder = 0;
+        }
+
         Debug.Log($"Spawned {piece.name} at {position}");
 
         return piece;
     }
-
 
     void Update()
     {
@@ -158,73 +165,89 @@ public class ChessManager : MonoBehaviour
 
             if (hit.collider != null)
             {
-                Debug.Log($"Clicked on {hit.collider.gameObject.name}");
+                string clickedObjectName = hit.collider.gameObject.name;
+                Debug.Log($"🖱 Clicked on {clickedObjectName}");
 
-                if (hit.collider.gameObject.name.StartsWith("Tile"))
+                // ✅ Detect if the clicked object is a tile
+                if (clickedObjectName.StartsWith("Tile"))
                 {
                     Vector2Int boardPos = Vector2Int.RoundToInt(hit.collider.gameObject.transform.position);
-                    Debug.Log($"Rounded Board Position: {boardPos}");
                     HandleTileClick(boardPos);
-                }
-                else if (hit.collider.gameObject.name.StartsWith("White") || hit.collider.gameObject.name.StartsWith("Black"))
-                {
-                    HandlePieceClick(hit.collider.gameObject);
                 }
             }
         }
     }
 
-    void HandlePieceClick(GameObject piece)
-    {
-        Debug.Log($"Selected piece: {piece.name}");
 
-        if (IsCorrectTurn(piece.name))
+    bool IsTileHighlighted(Vector2Int position)
+    {
+        foreach (GameObject highlight in highlightedTiles)
         {
-            selectedPiece = Vector2Int.RoundToInt(piece.transform.position);
-            pieceSelected = true;
-            HighlightValidMoves(selectedPiece);
+            if (Vector2Int.RoundToInt(highlight.transform.position) == position)
+            {
+                return true;
+            }
         }
-        else
-        {
-            Debug.Log("Not your turn!");
-        }
+        return false;
     }
+
+
 
     void HandleTileClick(Vector2Int boardPos)
     {
-        if (pieceSelected)
+        Debug.Log($"📌 Clicked on tile at {boardPos}");
+
+        // ✅ Check if a piece exists at the clicked tile
+        GameObject clickedPiece = GetPieceAtPosition(boardPos);
+
+        if (!pieceSelected)
         {
-            MovePiece(boardPos);
+            // ✅ If there's a piece on the tile and it's the correct turn, select it
+            if (clickedPiece != null && IsCorrectTurn(clickedPiece.name))
+            {
+                Debug.Log($"✔ Selecting piece: {clickedPiece.name}");
+                selectedPiece = boardPos;
+                pieceSelected = true;
+                HighlightValidMoves(boardPos);
+            }
+            else
+            {
+                Debug.Log("❌ No valid piece selected.");
+            }
         }
-    }
-
-
-    void SelectPiece(Vector2Int pos)
-    {
-        GameObject selected = GetPieceAtPosition(pos);
-        if (selected != null && IsCorrectTurn(selected.name))
+        else
         {
-            selectedPiece = pos;
-            pieceSelected = true;
-            HighlightValidMoves(pos);
+            // ✅ If a piece is selected, check if the clicked tile is a valid move
+            if (IsTileHighlighted(boardPos))
+            {
+                MovePiece(boardPos);
+            }
+            else
+            {
+                Debug.Log("❌ Invalid move. Resetting selection.");
+                ClearHighlights();
+                pieceSelected = false;
+            }
         }
     }
 
     void HighlightValidMoves(Vector2Int pos)
     {
+        Debug.Log($"🟩 Highlighting valid moves for: {pos}");
+
         ClearHighlights(); // Remove old highlights
         List<Vector2Int> validMoves = GetValidMoves(pos);
 
-        Debug.Log($"Valid moves for {pos}: {validMoves.Count}");
+        Debug.Log($"✅ Valid moves found: {validMoves.Count}");
 
         foreach (Vector2Int move in validMoves)
         {
-            Debug.Log($"Highlighting move at: {move}");
-            GameObject highlight = new GameObject("Highlight");
-            SpriteRenderer sr = highlight.AddComponent<SpriteRenderer>();
-            sr.color = highlightColor;
-            sr.sortingOrder = 0;
-            highlight.transform.position = new Vector2(move.x, move.y);
+            Debug.Log($"🟢 Highlighting move at: {move}");
+
+            // ✅ Instantiate HighlightPrefab instead of creating from scratch
+            GameObject highlight = Instantiate(highlightPrefab, new Vector2(move.x, move.y), Quaternion.identity);
+
+            // ✅ Ensure it's stored in the list for proper clearing later
             highlightedTiles.Add(highlight);
         }
     }
@@ -232,13 +255,17 @@ public class ChessManager : MonoBehaviour
     void ClearHighlights()
     {
         Debug.Log($"Clearing {highlightedTiles.Count} highlights");
-        foreach (GameObject tile in highlightedTiles)
+        
+        foreach (GameObject highlight in highlightedTiles)
         {
-            Destroy(tile);
+            if (highlight != null)
+            {
+                Destroy(highlight);
+            }
         }
+
         highlightedTiles.Clear();
     }
-
 
     void MovePiece(Vector2Int target)
     {
@@ -248,17 +275,17 @@ public class ChessManager : MonoBehaviour
 
             if (piece != null)
             {
-                Debug.Log($"Moving {piece.name} from {selectedPiece} to {target}");
+                Debug.Log($"🚀 Moving {piece.name} from {selectedPiece} to {target}");
 
                 piece.transform.position = new Vector2(target.x, target.y);
-
-                // Remove old position from tracking
                 UpdateBoardTracking(selectedPiece, target);
 
+                // ✅ Reset Selection and Switch Turn
                 pieceSelected = false;
-                turn = (turn == "white") ? "black" : "white";
                 ClearHighlights();
+                turn = (turn == "white") ? "black" : "white";
 
+                // ✅ **AI Move After Player**
                 if (turn == "black") StartCoroutine(AIMove());
             }
         }
@@ -294,63 +321,174 @@ public class ChessManager : MonoBehaviour
         return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8;
     }
 
-    List<Vector2Int> GetValidMoves(Vector2Int pos)
+    List<Vector2Int> GetValidMoves(Vector2Int tilePos)
     {
         List<Vector2Int> validMoves = new List<Vector2Int>();
-        GameObject piece = GetPieceAtPosition(pos);
 
+        GameObject piece = GetPieceAtPosition(tilePos);
         if (piece == null)
         {
-            Debug.Log($"No piece found at {pos}");
+            Debug.LogError($"❌ No piece found at {tilePos}");
             return validMoves;
         }
 
-        string pieceName = piece.name;
-        bool isWhite = pieceName.StartsWith("White");
+        string pieceTag = piece.tag; // ✅ Use tags instead of parsing name
+        bool isWhite = pieceTag.Contains("White");
 
-        // ✅ **Check if the piece is a Pawn using EndsWith**
-        if (pieceName.EndsWith("Pawn"))
+        Debug.Log($"🔍 Checking valid moves for {pieceTag} at {tilePos}");
+
+        switch (pieceTag)
         {
-            int direction = isWhite ? -1 : 1; // ✅ White moves UP (-1), Black moves DOWN (+1)
-            int startRow = isWhite ? 6 : 1;   // ✅ **White pawns start at row 6, Black pawns start at row 1**
+            case "WhitePawn":
+            case "BlackPawn":
+                return GetPawnMoves(tilePos, isWhite);
 
-            Vector2Int forward = new Vector2Int(pos.x, pos.y + direction);
+            case "WhiteRook":
+            case "BlackRook":
+                return GetSlidingMoves(tilePos, new Vector2Int[] { 
+                    Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right 
+                }, isWhite);
 
-            // ✅ **Move forward if empty**
-            if (IsInsideBoard(forward) && GetPieceAtPosition(forward) == null)
+            case "WhiteBishop":
+            case "BlackBishop":
+                return GetSlidingMoves(tilePos, new Vector2Int[] { 
+                    new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
+                }, isWhite);
+
+            case "WhiteQueen":
+            case "BlackQueen":
+                return GetSlidingMoves(tilePos, new Vector2Int[] {
+                    Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right,
+                    new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
+                }, isWhite);
+
+            case "WhiteKing":
+            case "BlackKing":
+                return GetKingMoves(tilePos, isWhite);
+
+            case "WhiteKnight":
+            case "BlackKnight":
+                return GetKnightMoves(tilePos, isWhite);
+        }
+
+        return validMoves;
+    }
+
+    List<Vector2Int> GetSlidingMoves(Vector2Int pos, Vector2Int[] directions, bool isWhite)
+    {
+        List<Vector2Int> moves = new List<Vector2Int>();
+
+        foreach (Vector2Int dir in directions)
+        {
+            Vector2Int currentPos = pos + dir;
+
+            while (IsInsideBoard(currentPos))
             {
-                validMoves.Add(forward);
-
-                // ✅ **Double-step only if in starting position & both spaces are empty**
-                Vector2Int doubleStep = new Vector2Int(pos.x, pos.y + (2 * direction));
-                if (pos.y == startRow && GetPieceAtPosition(doubleStep) == null && GetPieceAtPosition(forward) == null)
+                GameObject target = GetPieceAtPosition(currentPos);
+                if (target == null)
                 {
-                    validMoves.Add(doubleStep);
+                    moves.Add(currentPos);
                 }
-            }
-
-            // ✅ **Diagonal captures (check if an enemy piece is present)**
-            Vector2Int[] captures = { 
-                new Vector2Int(pos.x - 1, pos.y + direction), 
-                new Vector2Int(pos.x + 1, pos.y + direction) 
-            };
-
-            foreach (Vector2Int capture in captures)
-            {
-                if (IsInsideBoard(capture))
+                else
                 {
-                    GameObject target = GetPieceAtPosition(capture);
-                    if (target != null && IsEnemyPiece(target, isWhite))
-                    {
-                        validMoves.Add(capture);
-                    }
+                    if (IsEnemyPiece(target, isWhite))
+                        moves.Add(currentPos);
+                    break;
+                }
+                currentPos += dir;
+            }
+        }
+
+        return moves;
+    }
+
+
+    List<Vector2Int> GetPawnMoves(Vector2Int pos, bool isWhite)
+    {
+        List<Vector2Int> validMoves = new List<Vector2Int>();
+
+        int direction = isWhite ? -1 : 1; 
+        int startRow = isWhite ? 6 : 1;   
+
+        Vector2Int forward = new Vector2Int(pos.x, pos.y + direction);
+
+        if (IsInsideBoard(forward) && GetPieceAtPosition(forward) == null)
+        {
+            validMoves.Add(forward);
+
+            Vector2Int doubleStep = new Vector2Int(pos.x, pos.y + (2 * direction));
+            if (pos.y == startRow && GetPieceAtPosition(doubleStep) == null)
+            {
+                validMoves.Add(doubleStep);
+            }
+        }
+
+        Vector2Int[] captures = {
+            new Vector2Int(pos.x - 1, pos.y + direction),
+            new Vector2Int(pos.x + 1, pos.y + direction)
+        };
+
+        foreach (Vector2Int capture in captures)
+        {
+            if (IsInsideBoard(capture))
+            {
+                GameObject target = GetPieceAtPosition(capture);
+                if (target != null && IsEnemyPiece(target, isWhite))
+                {
+                    validMoves.Add(capture);
                 }
             }
         }
 
-        Debug.Log($"Valid moves for {pieceName} at {pos}: {validMoves.Count}");
         return validMoves;
     }
+
+    List<Vector2Int> GetKingMoves(Vector2Int pos, bool isWhite)
+    {
+        List<Vector2Int> moves = new List<Vector2Int>();
+
+        Vector2Int[] directions = {
+            Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right,
+            new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
+        };
+
+        foreach (Vector2Int dir in directions)
+        {
+            Vector2Int newPos = pos + dir;
+            if (IsInsideBoard(newPos))
+            {
+                GameObject target = GetPieceAtPosition(newPos);
+                if (target == null || IsEnemyPiece(target, isWhite))
+                    moves.Add(newPos);
+            }
+        }
+
+        return moves;
+    }
+
+    List<Vector2Int> GetKnightMoves(Vector2Int pos, bool isWhite)
+    {
+        List<Vector2Int> moves = new List<Vector2Int>();
+
+        Vector2Int[] jumps = {
+            new Vector2Int(1, 2), new Vector2Int(1, -2), new Vector2Int(-1, 2), new Vector2Int(-1, -2),
+            new Vector2Int(2, 1), new Vector2Int(2, -1), new Vector2Int(-2, 1), new Vector2Int(-2, -1)
+        };
+
+        foreach (Vector2Int jump in jumps)
+        {
+            Vector2Int newPos = pos + jump;
+            if (IsInsideBoard(newPos))
+            {
+                GameObject target = GetPieceAtPosition(newPos);
+                if (target == null || IsEnemyPiece(target, isWhite))
+                    moves.Add(newPos);
+            }
+        }
+
+        return moves;
+    }
+
 
     // Get piece at a given position
     GameObject GetPieceAtPosition(Vector2Int pos)
@@ -359,7 +497,6 @@ public class ChessManager : MonoBehaviour
         {
             if (Vector2Int.RoundToInt(piece.transform.position) == pos)
             {
-                Debug.Log($"Found {piece.name} at {pos}");
                 return piece;
             }
         }
@@ -368,15 +505,12 @@ public class ChessManager : MonoBehaviour
         {
             if (Vector2Int.RoundToInt(piece.transform.position) == pos)
             {
-                Debug.Log($"Found {piece.name} at {pos}");
                 return piece;
             }
         }
 
-        Debug.Log($"No piece found at {pos}");
         return null;
     }
-
 
 
     // Check if the piece is an enemy piece
@@ -387,12 +521,11 @@ public class ChessManager : MonoBehaviour
 
     IEnumerator AIMove()
     {
-        yield return new WaitForSeconds(0.5f); // Small delay for AI move simulation
+        yield return new WaitForSeconds(0.5f); 
 
-        List<GameObject> aiPieces = blackPieces; // AI moves black pieces
+        List<GameObject> aiPieces = blackPieces; 
         List<GameObject> movablePieces = new List<GameObject>();
 
-        // Find all black pieces that have valid moves
         foreach (GameObject piece in aiPieces)
         {
             Vector2Int pos = Vector2Int.RoundToInt(piece.transform.position);
@@ -406,33 +539,17 @@ public class ChessManager : MonoBehaviour
         {
             Debug.Log("AI has no valid moves! Skipping turn.");
             turn = "white";
-            yield break; // **Prevent freeze**
+            yield break;
         }
 
-        // Choose a random piece from those that have valid moves
         GameObject selectedPiece = movablePieces[Random.Range(0, movablePieces.Count)];
         Vector2Int piecePos = Vector2Int.RoundToInt(selectedPiece.transform.position);
         List<Vector2Int> validMoves = GetValidMoves(piecePos);
 
-        if (validMoves.Count == 0) // **Extra safeguard**
-        {
-            Debug.Log("AI piece has no valid moves. Skipping.");
-            turn = "white";
-            yield break;
-        }
-
-        // Pick a random move from the selected piece's valid moves
         Vector2Int chosenMove = validMoves[Random.Range(0, validMoves.Count)];
-
-        // Move AI piece
         selectedPiece.transform.position = new Vector2(chosenMove.x, chosenMove.y);
         
-        // ✅ Ensure board updates tracking
         UpdateBoardTracking(piecePos, chosenMove);
-
-        // Switch turn back to white
         turn = "white";
     }
-
-
 }
