@@ -24,6 +24,8 @@ public class ChessManager : MonoBehaviour
     public Color highlightColor = new Color(0, 1, 0, 0.5f); // Transparent green
     private List<GameObject> highlightedTiles = new List<GameObject>(); // Stores highlighted tiles
     public GameObject highlightPrefab;
+    public bool isPlayerWhite = true; // Default to White
+
 
     private readonly string[,] startBoard = {
         { "r", "n", "b", "q", "k", "b", "n", "r" },
@@ -38,9 +40,10 @@ public class ChessManager : MonoBehaviour
 
     private Dictionary<string, int> piecePrefabIndex = new Dictionary<string, int>()
     {
-        { "P", 0 }, { "R", 1 }, { "N", 2 }, { "B", 3 }, { "Q", 4 }, { "K", 5 },
-        { "p", 0 }, { "r", 1 }, { "n", 2 }, { "b", 3 }, { "q", 4 }, { "k", 5 }
+        { "P", 0 }, { "R", 1 }, { "N", 2 }, { "B", 3 }, { "K", 4 }, { "Q", 5 }, // ✅ White pieces (Swapped King & Queen)
+        { "p", 0 }, { "r", 1 }, { "n", 2 }, { "b", 3 }, { "k", 4 }, { "q", 5 }  // ✅ Black pieces (Swapped King & Queen)
     };
+
 
     void Start()
     {
@@ -52,8 +55,19 @@ public class ChessManager : MonoBehaviour
     {
         Camera.main.orthographic = true;
         Camera.main.orthographicSize = projection;
-        Camera.main.transform.position = new Vector3(3.5f, 3.5f, -10);
+
+        if (isPlayerWhite)
+        {
+            Camera.main.transform.position = new Vector3(3.5f, 3.5f, -10); // Normal view for White
+            Camera.main.transform.rotation = Quaternion.Euler(0, 0, 180); // Flip the board for Black
+        }
+        else
+        {
+            Camera.main.transform.position = new Vector3(3.5f, 3.5f, -10); // Default for White
+            Camera.main.transform.rotation = Quaternion.identity;
+        }
     }
+
 
     IEnumerator InitializeBoard()
     {
@@ -144,6 +158,12 @@ public class ChessManager : MonoBehaviour
         GameObject piece = Instantiate(piecePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
         piece.name = isWhite ? $"White_{pieceSymbol}" : $"Black_{pieceSymbol}";
 
+        // ✅ Rotate pieces if the player is Black
+        if (isPlayerWhite)
+        {
+            piece.transform.rotation = Quaternion.Euler(0, 0, 180);
+        }
+
         // ✅ Fix: Ensure pieces are above highlights
         SpriteRenderer sr = piece.GetComponent<SpriteRenderer>();
         if (sr != null)
@@ -155,6 +175,7 @@ public class ChessManager : MonoBehaviour
 
         return piece;
     }
+
 
     void Update()
     {
@@ -242,15 +263,34 @@ public class ChessManager : MonoBehaviour
 
         foreach (Vector2Int move in validMoves)
         {
+            // ✅ Ensure the tile is not occupied by a friendly piece
+            GameObject targetPiece = GetPieceAtPosition(move);
+            if (targetPiece != null && !IsEnemyPiece(targetPiece, GetPieceAtPosition(pos).tag.Contains("White")))
+            {
+                Debug.Log($"🚫 Skipping invalid move at {move} (Occupied by friendly piece)");
+                continue; // Skip highlighting this tile
+            }
+
             Debug.Log($"🟢 Highlighting move at: {move}");
 
-            // ✅ Instantiate HighlightPrefab instead of creating from scratch
+            // ✅ Instantiate highlight prefab at the correct position
             GameObject highlight = Instantiate(highlightPrefab, new Vector2(move.x, move.y), Quaternion.identity);
 
-            // ✅ Ensure it's stored in the list for proper clearing later
+            // ✅ Adjust sorting order so it appears below pieces but above board tiles
+            SpriteRenderer sr = highlight.GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.sortingOrder = -1; // Ensure it's below pieces but above board
+            }
+
+            // ✅ Scale the highlight properly to fit tile size (assuming 1x1 tile)
+            highlight.transform.localScale = Vector3.one;
+
+            // ✅ Store the highlight for later removal
             highlightedTiles.Add(highlight);
         }
     }
+
 
     void ClearHighlights()
     {
@@ -267,6 +307,7 @@ public class ChessManager : MonoBehaviour
         highlightedTiles.Clear();
     }
 
+
     void MovePiece(Vector2Int target)
     {
         if (GetValidMoves(selectedPiece).Contains(target))
@@ -278,18 +319,19 @@ public class ChessManager : MonoBehaviour
                 Debug.Log($"🚀 Moving {piece.name} from {selectedPiece} to {target}");
 
                 piece.transform.position = new Vector2(target.x, target.y);
-                UpdateBoardTracking(selectedPiece, target);
 
-                // ✅ Reset Selection and Switch Turn
-                pieceSelected = false;
+                // ✅ Clear highlights after moving
                 ClearHighlights();
+
+                // ✅ Switch turn
+                pieceSelected = false;
                 turn = (turn == "white") ? "black" : "white";
 
-                // ✅ **AI Move After Player**
                 if (turn == "black") StartCoroutine(AIMove());
             }
         }
     }
+
 
     void UpdateBoardTracking(Vector2Int oldPos, Vector2Int newPos)
     {
@@ -310,11 +352,45 @@ public class ChessManager : MonoBehaviour
         }
     }
 
-
     bool IsCorrectTurn(string pieceName)
     {
-        return (turn == "white" && pieceName.StartsWith("White")) || (turn == "black" && pieceName.StartsWith("Black"));
+        if (isPlayerWhite)
+        {
+            return (turn == "white" && pieceName.StartsWith("White")) ||
+                (turn == "black" && pieceName.StartsWith("Black"));
+        }
+        else
+        {
+            return (turn == "black" && pieceName.StartsWith("White")) ||
+                (turn == "white" && pieceName.StartsWith("Black"));
+        }
     }
+
+
+    public void TogglePlayerColor()
+    {
+        isPlayerWhite = !isPlayerWhite; // Toggle between White and Black
+        Debug.Log($"Player color set to: {(isPlayerWhite ? "Black" : "White")}");
+        
+        RestartGame();
+    }
+
+    void RestartGame()
+    {
+        StopAllCoroutines();
+        ClearHighlights();
+        
+        foreach (GameObject piece in whitePieces) Destroy(piece);
+        foreach (GameObject piece in blackPieces) Destroy(piece);
+        
+        whitePieces.Clear();
+        blackPieces.Clear();
+
+        PositionCamera();
+        StartCoroutine(InitializeBoard());
+        turn = isPlayerWhite ? "black" : "white"; // Start with Black if player is Black
+    }
+
 
     bool IsInsideBoard(Vector2Int pos)
     {
@@ -332,7 +408,7 @@ public class ChessManager : MonoBehaviour
             return validMoves;
         }
 
-        string pieceTag = piece.tag; // ✅ Use tags instead of parsing name
+        string pieceTag = piece.tag;
         bool isWhite = pieceTag.Contains("White");
 
         Debug.Log($"🔍 Checking valid moves for {pieceTag} at {tilePos}");
@@ -374,41 +450,13 @@ public class ChessManager : MonoBehaviour
         return validMoves;
     }
 
-    List<Vector2Int> GetSlidingMoves(Vector2Int pos, Vector2Int[] directions, bool isWhite)
-    {
-        List<Vector2Int> moves = new List<Vector2Int>();
-
-        foreach (Vector2Int dir in directions)
-        {
-            Vector2Int currentPos = pos + dir;
-
-            while (IsInsideBoard(currentPos))
-            {
-                GameObject target = GetPieceAtPosition(currentPos);
-                if (target == null)
-                {
-                    moves.Add(currentPos);
-                }
-                else
-                {
-                    if (IsEnemyPiece(target, isWhite))
-                        moves.Add(currentPos);
-                    break;
-                }
-                currentPos += dir;
-            }
-        }
-
-        return moves;
-    }
-
-
     List<Vector2Int> GetPawnMoves(Vector2Int pos, bool isWhite)
     {
         List<Vector2Int> validMoves = new List<Vector2Int>();
 
-        int direction = isWhite ? -1 : 1; 
-        int startRow = isWhite ? 6 : 1;   
+        // ✅ Flip pawn direction if the player is Black
+        int direction = (isWhite ^ isPlayerWhite) ? -1 : 1; 
+        int startRow = (isWhite ^ isPlayerWhite) ? 6 : 1;   
 
         Vector2Int forward = new Vector2Int(pos.x, pos.y + direction);
 
@@ -443,6 +491,41 @@ public class ChessManager : MonoBehaviour
         return validMoves;
     }
 
+    List<Vector2Int> GetSlidingMoves(Vector2Int pos, Vector2Int[] directions, bool isWhite)
+    {
+        List<Vector2Int> moves = new List<Vector2Int>();
+
+        foreach (Vector2Int dir in directions)
+        {
+            Vector2Int currentPos = pos + dir;
+
+            while (IsInsideBoard(currentPos))
+            {
+                GameObject target = GetPieceAtPosition(currentPos);
+                
+                if (target == null)
+                {
+                    // ✅ Add empty tiles as valid move
+                    moves.Add(currentPos);
+                }
+                else
+                {
+                    if (IsEnemyPiece(target, isWhite))
+                    {
+                        // ✅ Can capture an enemy piece
+                        moves.Add(currentPos);
+                    }
+                    // ✅ Stop moving further (cannot jump)
+                    break;
+                }
+                currentPos += dir;
+            }
+        }
+
+        return moves;
+    }
+
+
     List<Vector2Int> GetKingMoves(Vector2Int pos, bool isWhite)
     {
         List<Vector2Int> moves = new List<Vector2Int>();
@@ -458,13 +541,16 @@ public class ChessManager : MonoBehaviour
             if (IsInsideBoard(newPos))
             {
                 GameObject target = GetPieceAtPosition(newPos);
-                if (target == null || IsEnemyPiece(target, isWhite))
+                if (target == null || IsEnemyPiece(target, isWhite)) // ✅ Ensure not friendly piece
+                {
                     moves.Add(newPos);
+                }
             }
         }
 
         return moves;
     }
+
 
     List<Vector2Int> GetKnightMoves(Vector2Int pos, bool isWhite)
     {
@@ -481,13 +567,16 @@ public class ChessManager : MonoBehaviour
             if (IsInsideBoard(newPos))
             {
                 GameObject target = GetPieceAtPosition(newPos);
-                if (target == null || IsEnemyPiece(target, isWhite))
+                if (target == null || IsEnemyPiece(target, isWhite)) // ✅ Ensure not friendly piece
+                {
                     moves.Add(newPos);
+                }
             }
         }
 
         return moves;
     }
+
 
 
     // Get piece at a given position
@@ -521,9 +610,11 @@ public class ChessManager : MonoBehaviour
 
     IEnumerator AIMove()
     {
-        yield return new WaitForSeconds(0.5f); 
+        yield return new WaitForSeconds(0.5f); // Small delay for AI move simulation
 
-        List<GameObject> aiPieces = blackPieces; 
+        // ✅ AI controls the opposite color
+        bool aiPlaysWhite = !isPlayerWhite; 
+        List<GameObject> aiPieces = aiPlaysWhite ? whitePieces : blackPieces; 
         List<GameObject> movablePieces = new List<GameObject>();
 
         foreach (GameObject piece in aiPieces)
@@ -538,18 +629,29 @@ public class ChessManager : MonoBehaviour
         if (movablePieces.Count == 0)
         {
             Debug.Log("AI has no valid moves! Skipping turn.");
-            turn = "white";
+            turn = aiPlaysWhite ? "black" : "white"; // Switch turn back to player
             yield break;
         }
 
+        // ✅ Choose a piece and move randomly
         GameObject selectedPiece = movablePieces[Random.Range(0, movablePieces.Count)];
         Vector2Int piecePos = Vector2Int.RoundToInt(selectedPiece.transform.position);
         List<Vector2Int> validMoves = GetValidMoves(piecePos);
 
+        if (validMoves.Count == 0) // **Extra safeguard**
+        {
+            Debug.Log("AI piece has no valid moves. Skipping.");
+            turn = aiPlaysWhite ? "black" : "white";
+            yield break;
+        }
+
         Vector2Int chosenMove = validMoves[Random.Range(0, validMoves.Count)];
         selectedPiece.transform.position = new Vector2(chosenMove.x, chosenMove.y);
         
+        // ✅ Update board tracking
         UpdateBoardTracking(piecePos, chosenMove);
-        turn = "white";
+
+        // ✅ Switch turn back to player
+        turn = aiPlaysWhite ? "black" : "white";
     }
 }
