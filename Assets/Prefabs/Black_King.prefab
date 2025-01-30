@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3178270874646830311}
   m_Layer: 0
   m_Name: Black_King
-  m_TagString: WhiteKing
+  m_TagString: BlackKing
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

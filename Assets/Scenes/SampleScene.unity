@@ -447,7 +447,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tilePrefab: {fileID: 7835952463898058150, guid: 2fba50386ed9a4e808c727e7e2f85499, type: 3}
-  projection: 8
+  projection: 5
   whitePiecePrefabs:
   - {fileID: 6417694777086067560, guid: de19f285fee664c3b924d756e6396a91, type: 3}
   - {fileID: 4953473426620616327, guid: 19c3253da1a61475d9d0ed5b1a6eacab, type: 3}
@@ -466,7 +466,7 @@ MonoBehaviour:
   blackTileTint: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   highlightColor: {r: 0, g: 1, b: 0, a: 0.5}
   highlightPrefab: {fileID: 7835952463898058150, guid: f125ce5a0451a4a61ac8d5ce518eeca0, type: 3}
-  isPlayerBlack: 0
+  isPlayerWhite: 1
 --- !u!65 &1049432594
 BoxCollider:
   m_ObjectHideFlags: 0
