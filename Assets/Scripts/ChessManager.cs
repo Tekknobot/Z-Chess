@@ -1,9 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class ChessManager : MonoBehaviour
 {
+    public static ChessManager Instance { get; private set; } // Singleton instance
+
     public GameObject tilePrefab;
     public int projection = 8;
     public GameObject[] whitePiecePrefabs; 
@@ -13,13 +16,16 @@ public class ChessManager : MonoBehaviour
     private List<GameObject> whitePieces = new List<GameObject>();
     private List<GameObject> blackPieces = new List<GameObject>();
 
-    private string turn = "white";
+    public string turn = "white";
     public bool isPlayerWhite = true;
 
-    private Vector2Int selectedPiece;
-    private bool pieceSelected = false;
+    public Vector2Int selectedPiece;
+    public bool pieceSelected = false;
     public GameObject highlightPrefab;
     private List<GameObject> highlightedTiles = new List<GameObject>();
+    public bool isWhiteTurn = true; // True if it's White's turn, false if Black
+    private Dictionary<Vector2Int, GameObject> boardPieces = new Dictionary<Vector2Int, GameObject>();
+
 
     private readonly string[,] startBoardWhite = {
         { "r", "n", "b", "q", "k", "b", "n", "r" },
@@ -43,18 +49,75 @@ public class ChessManager : MonoBehaviour
         { "r", "n", "b", "k", "q", "b", "n", "r" }
     };
 
-
     private Dictionary<string, int> piecePrefabIndex = new Dictionary<string, int>()
     {
         { "P", 0 }, { "R", 1 }, { "N", 2 }, { "B", 3 }, { "Q", 4 }, { "K", 5 }, 
         { "p", 0 }, { "r", 1 }, { "n", 2 }, { "b", 3 }, { "q", 4 }, { "k", 5 }  
     };
 
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Debug.LogWarning("⚠️ Another instance of ChessManager found! Destroying duplicate.");
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // Ensure the instance persists across scenes
+        }
+
+        // Example of a game state variable
+
+        public void ToggleTurn()
+        {
+            isWhiteTurn = !isWhiteTurn;
+            Debug.Log("🔄 Turn switched. White's turn? " + isWhiteTurn);
+        }
+
+
     void Start()
     {
         PositionCamera();
         StartCoroutine(InitializeBoard());
     }
+
+    public void SelectPieceAt(Vector2Int position)
+    {
+        GameObject piece = GetPieceAtPosition(position);
+
+        if (piece != null)
+        {
+            string pieceTag = piece.tag; // Get piece tag (White or Black)
+            bool isWhitePiece = pieceTag.Contains("White");
+
+            // 🔹 Get isWhiteTurn from ChessManager instance
+            bool isWhiteTurn = FindFirstObjectByType<ChessManager>().isWhiteTurn;
+
+            if (isWhitePiece != isWhiteTurn)
+            {
+                Debug.Log($"⛔ Cannot select {pieceTag} at {position}, it's not your turn!");
+                return; // Prevent selecting opponent's piece
+            }
+
+            selectedPiece = position;
+            pieceSelected = true;
+            Debug.Log($"✅ Selected {piece.tag} at {position}");
+        }
+        else
+        {
+            Debug.Log("❌ No piece found at this tile");
+        }
+    }
+
+
+    public void EndTurn()
+    {
+        isWhiteTurn = !isWhiteTurn; // Switch turn
+        Debug.Log("🔄 Turn changed! Now it's " + (isWhiteTurn ? "White's" : "Black's") + " turn.");
+    }
+
 
     void PositionCamera()
     {
@@ -68,126 +131,114 @@ public class ChessManager : MonoBehaviour
         Debug.Log($"Camera set. Player is White: {isPlayerWhite}");
     }
 
-
-
-    void HandlePlayerInput()
+    public void HandleTileClick(Vector2Int gridPos)
     {
-        if (Input.GetMouseButtonDown(0))
+        Debug.Log($"🟢 Tile Clicked at {gridPos}");
+
+        Vector2Int flippedPos = isPlayerWhite ? new Vector2Int(gridPos.x, 7 - gridPos.y) : gridPos;
+        Debug.Log($"🔄 Adjusted for White's view: {flippedPos}");
+
+        if (!IsValidPosition(flippedPos))
         {
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector2Int gridPos = new Vector2Int(Mathf.FloorToInt(mousePos.x), Mathf.FloorToInt(mousePos.y));
+            Debug.Log("❌ Clicked outside the board!");
+            return;
+        }
 
-            Debug.Log($"Mouse Position: {mousePos}, Grid Position: {gridPos}");
+        GameObject piece = GetPieceAtPosition(flippedPos);
 
-            if (!IsValidPosition(gridPos)) 
+        if (!pieceSelected)
+        {
+            if (piece != null)
             {
-                Debug.Log("Invalid Position Clicked!");
-                return;
-            }
+                Debug.Log($"🔍 Checking piece at {flippedPos}: {piece.name} | Tag: {piece.tag}");
 
-            if (!pieceSelected)
-            {
-                GameObject piece = GetPieceAtPosition(gridPos);
-                if (piece != null && piece.tag.StartsWith(turn == "white" ? "White" : "Black"))
+                bool isWhitePiece = piece.tag == "WhitePawn" || piece.tag == "WhiteRook" || 
+                                    piece.tag == "WhiteKnight" || piece.tag == "WhiteBishop" || 
+                                    piece.tag == "WhiteQueen" || piece.tag == "WhiteKing";
+
+                bool isPlayerPiece = (isPlayerWhite && isWhitePiece) || (!isPlayerWhite && !isWhitePiece);
+                bool isCorrectTurn = (turn == "white" && isWhitePiece) || (turn == "black" && !isWhitePiece);
+
+                Debug.Log($"🔎 Found piece: {piece.tag} at {flippedPos} - Is Player's Piece? {isPlayerPiece} - Correct Turn? {isCorrectTurn}");
+
+                if (isPlayerPiece && isCorrectTurn)
                 {
-                    selectedPiece = gridPos;
+                    selectedPiece = flippedPos;
                     pieceSelected = true;
+                    Debug.Log($"✅ Selected {piece.tag} at {flippedPos}");
+
                     HighlightValidMoves(selectedPiece);
-                    Debug.Log($"Piece Selected at {gridPos}");
+                }
+                else
+                {
+                    Debug.Log("⛔ You cannot select this piece.");
                 }
             }
             else
             {
-                List<Vector2Int> validMoves = GetValidMoves(selectedPiece);
-                if (validMoves.Contains(gridPos))
-                {
-                    MovePiece(selectedPiece, gridPos);
-                    turn = turn == "white" ? "black" : "white";
-                    Debug.Log($"Piece Moved to {gridPos}");
-                }
-                else
-                {
-                    Debug.Log("Invalid Move");
-                }
-
-                pieceSelected = false;
-                ClearHighlights();
-            }
-        }
-    }
-
-    public void HandleTileClick(Vector2Int gridPos)
-    {
-        if (isPlayerWhite)
-        {
-            gridPos = new Vector2Int(gridPos.x, 7 - gridPos.y); // Flip for white player
-        }
-
-        if (!IsValidPosition(gridPos)) return;
-
-        if (!pieceSelected)
-        {
-            GameObject piece = GetPieceAtPosition(gridPos);
-            if (piece != null)
-            {
-                bool isWhitePiece = piece.tag.StartsWith("White");
-                bool isPlayerPiece = (isPlayerWhite && isWhitePiece) || (!isPlayerWhite && !isWhitePiece);
-                bool isCorrectTurn = (turn == "white" && isWhitePiece) || (turn == "black" && !isWhitePiece);
-
-                // ✅ Ensure the player can only select their own pieces
-                if (isPlayerPiece && isCorrectTurn)
-                {
-                    selectedPiece = gridPos;
-                    pieceSelected = true;
-                    HighlightValidMoves(selectedPiece);
-                }
+                Debug.Log("❌ No piece found at this tile.");
             }
         }
         else
         {
-            List<Vector2Int> validMoves = GetValidMoves(selectedPiece);
-            if (validMoves.Contains(gridPos))
+            if (IsHighlightedTile(flippedPos))
             {
-                MovePiece(selectedPiece, gridPos);
-                turn = turn == "white" ? "black" : "white";
+                MovePiece(selectedPiece, flippedPos);
+                pieceSelected = false;
+                ClearHighlights();
             }
-
-            pieceSelected = false;
-            ClearHighlights();
+            else
+            {
+                Debug.Log("⛔ Invalid move! The clicked tile is not highlighted.");
+            }
         }
+    }
+
+    private bool IsHighlightedTile(Vector2Int position)
+    {
+        foreach (GameObject highlight in highlightedTiles)
+        {
+            if (highlight.transform.position.x == position.x && highlight.transform.position.y == position.y)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void MovePiece(Vector2Int from, Vector2Int to)
     {
-        Vector2Int realFrom = isPlayerWhite ? new Vector2Int(from.x, 7 - from.y) : from;
-        Vector2Int realTo = isPlayerWhite ? new Vector2Int(to.x, 7 - to.y) : to;
-
-        GameObject piece = GetPieceAtPosition(realFrom);
-        if (piece == null)
+        if (!boardPieces.ContainsKey(from))
         {
-            Debug.LogError($"MovePiece() failed: No piece found at {realFrom}");
+            Debug.LogError($"❌ MovePiece() failed: No piece found at {from}");
             return;
         }
 
-        GameObject targetPiece = GetPieceAtPosition(realTo);
-        if (targetPiece != null)
+        GameObject piece = boardPieces[from];
+
+        // ✅ Check if the destination has an enemy piece (for capturing)
+        if (boardPieces.ContainsKey(to))
         {
-            if (targetPiece.tag.StartsWith(turn == "white" ? "Black" : "White"))
-            {
-                Destroy(targetPiece);
-            }
+            GameObject capturedPiece = boardPieces[to];
+
+            if (capturedPiece.tag.Contains("White"))
+                whitePieces.Remove(capturedPiece);
             else
-            {
-                Debug.Log("Move blocked by same team piece.");
-                return;
-            }
+                blackPieces.Remove(capturedPiece);
+
+            Destroy(capturedPiece);
+            Debug.Log($"🔥 Captured {capturedPiece.tag} at {to}");
         }
 
-        piece.transform.position = new Vector3(realTo.x, realTo.y, 0);
+        // ✅ Move the piece in Unity & update board state
+        piece.transform.position = new Vector3(to.x, to.y, 0);
+        boardPieces.Remove(from);
+        boardPieces[to] = piece;
 
-        Debug.Log($"Moved {piece.tag} from {realFrom} to {realTo}");
+        Debug.Log($"✅ Moved {piece.tag} from {from} to {to}");
 
         turn = turn == "white" ? "black" : "white";
+        isWhiteTurn = !isWhiteTurn;
     }
 
     void HighlightValidMoves(Vector2Int pos)
@@ -282,58 +333,82 @@ public class ChessManager : MonoBehaviour
                     return false;
         return true;
     }
-
     void SpawnPieces()
     {
-        // Use correct board setup based on the player color
+        // Determine board setup based on player's perspective
         string[,] boardToUse = isPlayerWhite ? startBoardWhite : startBoardBlack;
 
         for (int y = 0; y < 8; y++)
         {
             for (int x = 0; x < 8; x++)
             {
-                string pieceSymbol = boardToUse[y, x];
+                // Reverse board layout when playing as Black
+                int boardY = isPlayerWhite ? y : 7 - y;
+                string pieceSymbol = boardToUse[boardY, x];
+
                 if (!string.IsNullOrEmpty(pieceSymbol))
                 {
-                    // Adjust piece position so the player's pieces are always at the bottom
-                    int adjustedY = isPlayerWhite ? y : 7 - y;
+                    // ✅ Adjust visual positioning to match player perspective
                     int adjustedX = isPlayerWhite ? x : 7 - x;
-
+                    int adjustedY = isPlayerWhite ? y : 7 - y;
                     Vector2Int boardPos = new Vector2Int(adjustedX, adjustedY);
 
+                    // ✅ Create piece at the correct board position
                     GameObject piece = CreatePiece(pieceSymbol, boardPos);
+
                     if (piece != null)
                     {
-                        if (char.IsUpper(pieceSymbol[0]))
+                        // Add piece to the correct list
+                        if (char.IsUpper(pieceSymbol[0])) 
                             whitePieces.Add(piece);
                         else
                             blackPieces.Add(piece);
 
-                        Debug.Log($"Spawned {pieceSymbol} at {boardPos}, Adjusted for Player Side: {!isPlayerWhite}");
+                        Debug.Log($"✅ Spawned {pieceSymbol} at {boardPos}, Assigned Tag: {piece.tag}, Player is White: {isPlayerWhite}");
                     }
                 }
             }
         }
-        
-        // ✅ Move White pieces to the bottom and Black pieces to the top if needed
-        AdjustPiecePositions();        
+        // Ensure pieces are adjusted
+        AdjustPiecePositions();
     }
+
+
 
     void AdjustPiecePositions()
     {
+        Dictionary<Vector2Int, GameObject> updatedPositions = new Dictionary<Vector2Int, GameObject>();
+
         if (isPlayerWhite)
         {
             foreach (GameObject piece in whitePieces)
             {
-                Vector2Int pos = new Vector2Int(
+                Vector2Int oldPos = new Vector2Int(
                     Mathf.RoundToInt(piece.transform.position.x),
                     Mathf.RoundToInt(piece.transform.position.y)
                 );
 
-                // ✅ Move White pieces to the bottom
-                piece.transform.position = new Vector3(pos.x, 7 - pos.y, 0);
+                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
+                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
+
+                updatedPositions[newPos] = piece;
             }
 
+            foreach (GameObject piece in blackPieces)
+            {
+                Vector2Int oldPos = new Vector2Int(
+                    Mathf.RoundToInt(piece.transform.position.x),
+                    Mathf.RoundToInt(piece.transform.position.y)
+                );
+
+                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
+                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
+
+                updatedPositions[newPos] = piece;
+            }
+        }
+        else
+        {
             foreach (GameObject piece in blackPieces)
             {
                 Vector2Int pos = new Vector2Int(
@@ -341,14 +416,27 @@ public class ChessManager : MonoBehaviour
                     Mathf.RoundToInt(piece.transform.position.y)
                 );
 
-                // ✅ Move Black pieces to the top
-                piece.transform.position = new Vector3(pos.x, 7 - pos.y, 0);
+                piece.transform.position = new Vector3(pos.x, pos.y, 0);
+                updatedPositions[pos] = piece;
+            }
+
+            foreach (GameObject piece in whitePieces)
+            {
+                Vector2Int oldPos = new Vector2Int(
+                    Mathf.RoundToInt(piece.transform.position.x),
+                    Mathf.RoundToInt(piece.transform.position.y)
+                );
+
+                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
+                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
+
+                updatedPositions[newPos] = piece;
             }
         }
 
-        Debug.Log($"Adjusted piece positions. Player is White: {isPlayerWhite}");
+        boardPieces = updatedPositions;
+        Debug.Log($"✅ Adjusted piece positions & updated board. Player is White: {isPlayerWhite}");
     }
-
 
     GameObject CreatePiece(string pieceSymbol, Vector2 position)
     {
@@ -361,23 +449,26 @@ public class ChessManager : MonoBehaviour
         Vector2Int gridPos = new Vector2Int(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y));
         GameObject piece = Instantiate(piecePrefab, new Vector3(gridPos.x, gridPos.y, 0), Quaternion.identity);
 
-        // Rotate the pieces **ONLY when the player is Black**
-        if (!isPlayerWhite)
-        {
-            piece.transform.rotation = Quaternion.Euler(0, 0, 0);
-        }
+        // ✅ Explicitly set the correct tag
+        string tag = isWhite ? 
+            (pieceSymbol == "P" ? "WhitePawn" : 
+            pieceSymbol == "R" ? "WhiteRook" : 
+            pieceSymbol == "N" ? "WhiteKnight" : 
+            pieceSymbol == "B" ? "WhiteBishop" : 
+            pieceSymbol == "Q" ? "WhiteQueen" : "WhiteKing") 
+        :
+            (pieceSymbol == "p" ? "BlackPawn" : 
+            pieceSymbol == "r" ? "BlackRook" : 
+            pieceSymbol == "n" ? "BlackKnight" : 
+            pieceSymbol == "b" ? "BlackBishop" : 
+            pieceSymbol == "q" ? "BlackQueen" : "BlackKing");
 
-        // Ensure pieces render above tiles
-        SpriteRenderer sr = piece.GetComponent<SpriteRenderer>();
-        if (sr != null)
-        {
-            sr.sortingOrder = 1;
-        }
+        piece.tag = tag;
 
-        Debug.Log($"Created {pieceSymbol} at {gridPos}, Player is White: {isPlayerWhite}");
+        Debug.Log($"🛠 Created {pieceSymbol} at {gridPos}, Assigned Tag: {piece.tag}, Player is White: {isPlayerWhite}");
+
         return piece;
     }
-
 
 
     void ClearHighlights()
@@ -396,22 +487,14 @@ public class ChessManager : MonoBehaviour
         
         if (piece == null)
         {
-            Debug.Log($"No piece found at {pos} in GetValidMoves()");
+            Debug.Log($"❌ No piece found at {pos} in GetValidMoves()");
             return validMoves;
         }
 
-        string pieceTag = piece.tag; // ✅ Ensure tag is used
+        string pieceTag = piece.tag;
         bool isWhite = pieceTag.StartsWith("White");
 
-        // ✅ Ensure only the player's pieces are selected
-        bool isPlayerPiece = (isPlayerWhite && isWhite) || (!isPlayerWhite && !isWhite);
-        if (!isPlayerPiece)
-        {
-            Debug.Log($"Ignoring opponent piece at {pos} with tag {pieceTag}");
-            return validMoves;
-        }
-
-        Debug.Log($"Finding valid moves for {pieceTag} at {pos}");
+        Debug.Log($"🔎 Finding valid moves for {pieceTag} at {pos}");
 
         switch (pieceTag)
         {
@@ -440,53 +523,26 @@ public class ChessManager : MonoBehaviour
                 validMoves = GetKingMoves(pos, isWhite);
                 break;
             default:
-                Debug.LogError($"Unrecognized piece tag: {pieceTag} at {pos}");
+                Debug.LogError($"❌ Unrecognized piece tag: {pieceTag} at {pos}");
                 break;
         }
 
-        if (validMoves.Count == 0)
-        {
-            Debug.Log($"No valid moves found for {pieceTag} at {pos}");
-        }
-
+        Debug.Log($"✅ Found {validMoves.Count} valid moves for {pieceTag} at {pos}");
         return validMoves;
     }
 
     GameObject GetPieceAtPosition(Vector2Int pos)
     {
-        Vector2Int boardPos = isPlayerWhite ? new Vector2Int(pos.x, 7 - pos.y) : pos; // Flip for White player
-
-        foreach (GameObject piece in whitePieces)
+        if (boardPieces.TryGetValue(pos, out GameObject piece))
         {
-            Vector2Int piecePos = new Vector2Int(
-                Mathf.RoundToInt(piece.transform.position.x),
-                Mathf.RoundToInt(piece.transform.position.y)
-            );
-
-            if (piecePos == boardPos)
-            {
-                Debug.Log($"Found White Piece at {pos} ({piece.tag})");
-                return piece;
-            }
+            Debug.Log($"✅ Found piece at {pos} | Name: {piece.name} | Tag: {piece.tag}");
+            return piece;
         }
 
-        foreach (GameObject piece in blackPieces)
-        {
-            Vector2Int piecePos = new Vector2Int(
-                Mathf.RoundToInt(piece.transform.position.x),
-                Mathf.RoundToInt(piece.transform.position.y)
-            );
-
-            if (piecePos == boardPos)
-            {
-                Debug.Log($"Found Black Piece at {pos} ({piece.tag})");
-                return piece;
-            }
-        }
-
-        Debug.Log($"No piece found at {pos}");
+        Debug.Log($"❌ No piece found at {pos}");
         return null;
     }
+
 
 
     List<Vector2Int> GetPawnMoves(Vector2Int pos, bool isWhite)

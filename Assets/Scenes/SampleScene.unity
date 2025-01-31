@@ -401,98 +401,80 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1049432591
-GameObject:
+--- !u!1001 &714824651751262544
+PrefabInstance:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1049432592}
-  - component: {fileID: 1049432593}
-  - component: {fileID: 1049432594}
-  m_Layer: 0
-  m_Name: ChessManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1049432592
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1049432591}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1049432593
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1049432591}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d54b8377d96d4332918bfa8d3baff6f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  tilePrefab: {fileID: 7835952463898058150, guid: 2fba50386ed9a4e808c727e7e2f85499, type: 3}
-  projection: 5
-  whitePiecePrefabs:
-  - {fileID: 6417694777086067560, guid: de19f285fee664c3b924d756e6396a91, type: 3}
-  - {fileID: 4953473426620616327, guid: 19c3253da1a61475d9d0ed5b1a6eacab, type: 3}
-  - {fileID: 3046336843591269051, guid: b636615eb68ae4818a28c9a9c5f84886, type: 3}
-  - {fileID: 3081691040350658162, guid: 52dab30af431944bfbdfb178d8108b6b, type: 3}
-  - {fileID: 6180614900741608745, guid: d42278ebf9ac240a690c5eca8de4e9c7, type: 3}
-  - {fileID: 7948831011216646585, guid: 545289d3e0c494126a985df40a6d1cc2, type: 3}
-  blackPiecePrefabs:
-  - {fileID: 6594552235304988170, guid: 691dbdf93e7eb41ffb04f7c78719f1b6, type: 3}
-  - {fileID: 7514634453235493728, guid: 530b95e5337eb4e80ad480be044fcd46, type: 3}
-  - {fileID: 7358238840269567979, guid: 8a7b69491843a4af0b35dd50239e0d34, type: 3}
-  - {fileID: 5330650935432580344, guid: db4356d39528942efb780d879e83d80b, type: 3}
-  - {fileID: 6479477609101734499, guid: 0a6fcd8ab118a410c9e1fc3818a5714d, type: 3}
-  - {fileID: 2707281033494622923, guid: 9917a00909396413e932d6272889a83c, type: 3}
-  whiteTileTint: {r: 0.9, g: 0.9, b: 0.9, a: 1}
-  blackTileTint: {r: 0.2, g: 0.2, b: 0.2, a: 1}
-  highlightColor: {r: 0, g: 1, b: 0, a: 0.5}
-  highlightPrefab: {fileID: 7835952463898058150, guid: f125ce5a0451a4a61ac8d5ce518eeca0, type: 3}
-  isPlayerWhite: 1
---- !u!65 &1049432594
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1049432591}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3912684119381615593, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5064681982504178276, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: m_Name
+      value: ChessManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 7107570201649246194, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: isPlayerWhite
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7107570201649246194, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: 'blackPiecePrefabs.Array.data[4]'
+      value: 
+      objectReference: {fileID: 2707281033494622923, guid: 9917a00909396413e932d6272889a83c, type: 3}
+    - target: {fileID: 7107570201649246194, guid: 7310d490f46f545de892f003918697e3, type: 3}
+      propertyPath: 'blackPiecePrefabs.Array.data[5]'
+      value: 
+      objectReference: {fileID: 6479477609101734499, guid: 0a6fcd8ab118a410c9e1fc3818a5714d, type: 3}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 7310d490f46f545de892f003918697e3, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 619394802}
-  - {fileID: 1049432592}
+  - {fileID: 714824651751262544}
   - {fileID: 533415771}
