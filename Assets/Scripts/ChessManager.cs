@@ -70,12 +70,11 @@ public class ChessManager : MonoBehaviour
 
         // Example of a game state variable
 
-        public void ToggleTurn()
-        {
-            isWhiteTurn = !isWhiteTurn;
-            Debug.Log("🔄 Turn switched. White's turn? " + isWhiteTurn);
-        }
-
+    public void ToggleTurn()
+    {
+        isWhiteTurn = !isWhiteTurn;
+        Debug.Log("🔄 Turn switched. Now it's " + (isWhiteTurn ? "White" : "Black") + "'s turn.");
+    }
 
     void Start()
     {
@@ -114,8 +113,7 @@ public class ChessManager : MonoBehaviour
 
     public void EndTurn()
     {
-        isWhiteTurn = !isWhiteTurn; // Switch turn
-        Debug.Log("🔄 Turn changed! Now it's " + (isWhiteTurn ? "White's" : "Black's") + " turn.");
+        ToggleTurn();
     }
 
 
@@ -135,43 +133,49 @@ public class ChessManager : MonoBehaviour
     {
         Debug.Log($"🟢 Tile Clicked at {gridPos}");
 
-        Vector2Int flippedPos = isPlayerWhite ? new Vector2Int(gridPos.x, 7 - gridPos.y) : gridPos;
-        Debug.Log($"🔄 Adjusted for White's view: {flippedPos}");
+        // Adjust position based on player's perspective
+        Vector2Int adjustedPos = isPlayerWhite ? new Vector2Int(gridPos.x, 7 - gridPos.y) : gridPos;
+        Debug.Log($"🔄 Adjusted for White's view: {adjustedPos}");
 
-        if (!IsValidPosition(flippedPos))
+        if (!IsValidPosition(adjustedPos))
         {
             Debug.Log("❌ Clicked outside the board!");
             return;
         }
 
-        GameObject piece = GetPieceAtPosition(flippedPos);
+        GameObject clickedPiece = GetPieceAtPosition(adjustedPos);
 
         if (!pieceSelected)
         {
-            if (piece != null)
+            if (clickedPiece != null) 
             {
-                Debug.Log($"🔍 Checking piece at {flippedPos}: {piece.name} | Tag: {piece.tag}");
+                string pieceTag = clickedPiece.tag;
 
-                bool isWhitePiece = piece.tag == "WhitePawn" || piece.tag == "WhiteRook" || 
-                                    piece.tag == "WhiteKnight" || piece.tag == "WhiteBishop" || 
-                                    piece.tag == "WhiteQueen" || piece.tag == "WhiteKing";
+                // ✅ Use full piece name instead of "StartsWith"
+                bool isWhitePiece = pieceTag == "WhitePawn" || pieceTag == "WhiteRook" || 
+                                    pieceTag == "WhiteKnight" || pieceTag == "WhiteBishop" || 
+                                    pieceTag == "WhiteQueen" || pieceTag == "WhiteKing";
 
-                bool isPlayerPiece = (isPlayerWhite && isWhitePiece) || (!isPlayerWhite && !isWhitePiece);
-                bool isCorrectTurn = (turn == "white" && isWhitePiece) || (turn == "black" && !isWhitePiece);
+                bool isBlackPiece = pieceTag == "BlackPawn" || pieceTag == "BlackRook" || 
+                                    pieceTag == "BlackKnight" || pieceTag == "BlackBishop" || 
+                                    pieceTag == "BlackQueen" || pieceTag == "BlackKing";
 
-                Debug.Log($"🔎 Found piece: {piece.tag} at {flippedPos} - Is Player's Piece? {isPlayerPiece} - Correct Turn? {isCorrectTurn}");
+                bool isPlayerPiece = (isPlayerWhite && isWhitePiece) || (!isPlayerWhite && isBlackPiece);
+                bool isCorrectTurn = (isWhiteTurn && isWhitePiece) || (!isWhiteTurn && isBlackPiece);
+
+                Debug.Log($"🔎 Found piece: {pieceTag} at {adjustedPos} - Player's Piece? {isPlayerPiece} - Correct Turn? {isCorrectTurn}");
 
                 if (isPlayerPiece && isCorrectTurn)
                 {
-                    selectedPiece = flippedPos;
+                    selectedPiece = adjustedPos;
                     pieceSelected = true;
-                    Debug.Log($"✅ Selected {piece.tag} at {flippedPos}");
+                    Debug.Log($"✅ Selected {pieceTag} at {adjustedPos}");
 
                     HighlightValidMoves(selectedPiece);
                 }
                 else
                 {
-                    Debug.Log("⛔ You cannot select this piece.");
+                    Debug.Log("⛔ You cannot select this piece. It's either not yours or not your turn.");
                 }
             }
             else
@@ -181,30 +185,19 @@ public class ChessManager : MonoBehaviour
         }
         else
         {
-            if (IsHighlightedTile(flippedPos))
+            if (IsHighlightedTile(adjustedPos))
             {
-                MovePiece(selectedPiece, flippedPos);
+                MovePiece(selectedPiece, adjustedPos);
                 pieceSelected = false;
                 ClearHighlights();
             }
             else
             {
-                Debug.Log("⛔ Invalid move! The clicked tile is not highlighted.");
+                Debug.Log("⛔ Invalid move! The clicked tile is not a valid move.");
             }
         }
     }
 
-    private bool IsHighlightedTile(Vector2Int position)
-    {
-        foreach (GameObject highlight in highlightedTiles)
-        {
-            if (highlight.transform.position.x == position.x && highlight.transform.position.y == position.y)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
 
     void MovePiece(Vector2Int from, Vector2Int to)
     {
@@ -237,8 +230,19 @@ public class ChessManager : MonoBehaviour
 
         Debug.Log($"✅ Moved {piece.tag} from {from} to {to}");
 
-        turn = turn == "white" ? "black" : "white";
-        isWhiteTurn = !isWhiteTurn;
+        // ✅ Switch turn after moving
+        ToggleTurn();
+    }
+    private bool IsHighlightedTile(Vector2Int position)
+    {
+        foreach (GameObject highlight in highlightedTiles)
+        {
+            if (highlight.transform.position.x == position.x && highlight.transform.position.y == position.y)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void HighlightValidMoves(Vector2Int pos)
@@ -373,70 +377,33 @@ public class ChessManager : MonoBehaviour
         AdjustPiecePositions();
     }
 
-
-
     void AdjustPiecePositions()
     {
         Dictionary<Vector2Int, GameObject> updatedPositions = new Dictionary<Vector2Int, GameObject>();
 
-        if (isPlayerWhite)
+        foreach (GameObject piece in whitePieces.Concat(blackPieces)) // Process all pieces together
         {
-            foreach (GameObject piece in whitePieces)
-            {
-                Vector2Int oldPos = new Vector2Int(
-                    Mathf.RoundToInt(piece.transform.position.x),
-                    Mathf.RoundToInt(piece.transform.position.y)
-                );
+            Vector2Int oldPos = new Vector2Int(
+                Mathf.RoundToInt(piece.transform.position.x),
+                Mathf.RoundToInt(piece.transform.position.y)
+            );
 
-                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
-                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
+            // Flip Y-coordinate for correct player perspective
+            Vector2Int newPos = isPlayerWhite 
+                ? new Vector2Int(oldPos.x, 7 - oldPos.y) // Flip for White player
+                : oldPos; // Keep unchanged for Black player
 
-                updatedPositions[newPos] = piece;
-            }
-
-            foreach (GameObject piece in blackPieces)
-            {
-                Vector2Int oldPos = new Vector2Int(
-                    Mathf.RoundToInt(piece.transform.position.x),
-                    Mathf.RoundToInt(piece.transform.position.y)
-                );
-
-                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
-                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
-
-                updatedPositions[newPos] = piece;
-            }
-        }
-        else
-        {
-            foreach (GameObject piece in blackPieces)
-            {
-                Vector2Int pos = new Vector2Int(
-                    Mathf.RoundToInt(piece.transform.position.x),
-                    Mathf.RoundToInt(piece.transform.position.y)
-                );
-
-                piece.transform.position = new Vector3(pos.x, pos.y, 0);
-                updatedPositions[pos] = piece;
-            }
-
-            foreach (GameObject piece in whitePieces)
-            {
-                Vector2Int oldPos = new Vector2Int(
-                    Mathf.RoundToInt(piece.transform.position.x),
-                    Mathf.RoundToInt(piece.transform.position.y)
-                );
-
-                Vector2Int newPos = new Vector2Int(oldPos.x, 7 - oldPos.y);
-                piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
-
-                updatedPositions[newPos] = piece;
-            }
+            // ✅ Update both the actual transform and `boardPieces` dictionary
+            piece.transform.position = new Vector3(newPos.x, newPos.y, 0);
+            updatedPositions[newPos] = piece;
         }
 
+        // ✅ Update boardPieces AFTER transforming all pieces
         boardPieces = updatedPositions;
+
         Debug.Log($"✅ Adjusted piece positions & updated board. Player is White: {isPlayerWhite}");
     }
+
 
     GameObject CreatePiece(string pieceSymbol, Vector2 position)
     {
@@ -449,7 +416,7 @@ public class ChessManager : MonoBehaviour
         Vector2Int gridPos = new Vector2Int(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y));
         GameObject piece = Instantiate(piecePrefab, new Vector3(gridPos.x, gridPos.y, 0), Quaternion.identity);
 
-        // ✅ Explicitly set the correct tag
+        // ✅ Use full name for proper tag detection
         string tag = isWhite ? 
             (pieceSymbol == "P" ? "WhitePawn" : 
             pieceSymbol == "R" ? "WhiteRook" : 
@@ -471,6 +438,7 @@ public class ChessManager : MonoBehaviour
     }
 
 
+
     void ClearHighlights()
     {
         foreach (GameObject highlight in highlightedTiles)
@@ -484,7 +452,7 @@ public class ChessManager : MonoBehaviour
     {
         List<Vector2Int> validMoves = new List<Vector2Int>();
         GameObject piece = GetPieceAtPosition(pos);
-        
+
         if (piece == null)
         {
             Debug.Log($"❌ No piece found at {pos} in GetValidMoves()");
@@ -492,44 +460,44 @@ public class ChessManager : MonoBehaviour
         }
 
         string pieceTag = piece.tag;
-        bool isWhite = pieceTag.StartsWith("White");
-
+        
         Debug.Log($"🔎 Finding valid moves for {pieceTag} at {pos}");
 
         switch (pieceTag)
         {
             case "WhitePawn":
             case "BlackPawn":
-                validMoves = GetPawnMoves(pos, isWhite);
+                validMoves = GetPawnMoves(pos, pieceTag == "WhitePawn");
                 break;
             case "WhiteRook":
             case "BlackRook":
-                validMoves = GetRookMoves(pos, isWhite);
+                validMoves = GetRookMoves(pos, pieceTag == "WhiteRook");
                 break;
             case "WhiteKnight":
             case "BlackKnight":
-                validMoves = GetKnightMoves(pos, isWhite);
+                validMoves = GetKnightMoves(pos, pieceTag == "WhiteKnight");
                 break;
             case "WhiteBishop":
             case "BlackBishop":
-                validMoves = GetBishopMoves(pos, isWhite);
+                validMoves = GetBishopMoves(pos, pieceTag == "WhiteBishop");
                 break;
             case "WhiteQueen":
             case "BlackQueen":
-                validMoves = GetQueenMoves(pos, isWhite);
+                validMoves = GetQueenMoves(pos, pieceTag == "WhiteQueen");
                 break;
             case "WhiteKing":
             case "BlackKing":
-                validMoves = GetKingMoves(pos, isWhite);
+                validMoves = GetKingMoves(pos, pieceTag == "WhiteKing");
                 break;
             default:
                 Debug.LogError($"❌ Unrecognized piece tag: {pieceTag} at {pos}");
                 break;
         }
 
-        Debug.Log($"✅ Found {validMoves.Count} valid moves for {pieceTag} at {pos}");
-        return validMoves;
-    }
+    Debug.Log($"✅ Found {validMoves.Count} valid moves for {pieceTag} at {pos}");
+    return validMoves;
+}
+
 
     GameObject GetPieceAtPosition(Vector2Int pos)
     {
