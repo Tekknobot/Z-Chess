@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      fairy_princess_0: 1864863750061717613
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

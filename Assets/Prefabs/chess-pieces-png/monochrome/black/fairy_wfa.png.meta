@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      fairy_wfa_0: -345866078859096526
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

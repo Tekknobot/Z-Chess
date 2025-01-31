@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      fairy_pawnqueen_0: 6933932506121794817
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

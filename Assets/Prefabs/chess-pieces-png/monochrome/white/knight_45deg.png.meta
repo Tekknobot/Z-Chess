@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      knight_45deg_0: 8210831700015593299
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

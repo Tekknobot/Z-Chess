@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      fairy_amazon_0: 5747942351396342439
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      equihopper_0: -2244226534426029007
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

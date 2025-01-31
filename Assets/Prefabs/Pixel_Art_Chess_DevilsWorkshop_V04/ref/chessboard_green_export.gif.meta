@@ -160,7 +160,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      chessboard_green_export_0: 4160658556457414522
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
