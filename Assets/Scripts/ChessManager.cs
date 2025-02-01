@@ -92,7 +92,8 @@ public class ChessManager : MonoBehaviour
             bool isWhitePiece = pieceTag.Contains("White");
 
             // 🔹 Get isWhiteTurn from ChessManager instance
-            bool isWhiteTurn = FindFirstObjectByType<ChessManager>().isWhiteTurn;
+            bool isWhiteTurn = Instance.isWhiteTurn;
+
 
             if (isWhitePiece != isWhiteTurn)
             {
@@ -134,7 +135,7 @@ public class ChessManager : MonoBehaviour
         Debug.Log($"🟢 Tile Clicked at {gridPos}");
 
         // Adjust position based on player's perspective
-        Vector2Int adjustedPos = isPlayerWhite ? new Vector2Int(gridPos.x, 7 - gridPos.y) : gridPos;
+        Vector2Int adjustedPos = gridPos;
         Debug.Log($"🔄 Adjusted for White's view: {adjustedPos}");
 
         if (!IsValidPosition(adjustedPos))
@@ -321,7 +322,7 @@ public class ChessManager : MonoBehaviour
                 if (sr != null)
                 {
                     sr.color = (x + y) % 2 == 0 ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.25f, 0.25f, 0.25f); // Darker white & lighter black
-                    sr.sortingOrder = 0; // Ensure tiles are behind pieces and highlights
+                    sr.sortingOrder = -1; // Ensure tiles are behind pieces and highlights
                 }
 
                 tiles[x, y] = tile;
@@ -518,7 +519,7 @@ public class ChessManager : MonoBehaviour
         List<Vector2Int> moves = new List<Vector2Int>();
 
         int direction = isWhite ? 1 : -1;
-        if (isPlayerWhite) direction *= -1; // ✅ Flip for white player
+        // if (isPlayerWhite) direction *= -1; // ✅ Flip for white player
 
         Vector2Int forward = new Vector2Int(pos.x, pos.y + direction);
 
